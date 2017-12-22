@@ -40,7 +40,7 @@ application.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:Main.hist
 application.config['URL_GARR'] = "http://web.3riverswetweather.org/trp:Region.show_pixel_data_html;trp:,,/data"
 
 # ReST-ful API via Flask-Restful
-api = Api(app)
+api = Api(application)
 
 # Swagger API docs
 application.config['SWAGGER'] = {
