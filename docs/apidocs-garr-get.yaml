@@ -24,7 +24,7 @@ parameters:
   - name: zerofill
     in: query
     type: boolean
-    default: "False"
+    default: false
     description: Include data points with zero values
     allowEmptyValue: true
   - name: pixels

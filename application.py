@@ -349,9 +349,9 @@ class Gage(Resource):
 
         # assemble the payload
         payload = {
-            "_userid":app.config['USERID'],
-            "_passwd":app.config['PASSWD'],
-            "_userptr":app.config['USERPTR'],
+            "_userid":application.config['USERID'],
+            "_passwd":application.config['PASSWD'],
+            "_userptr":application.config['USERPTR'],
             "startmonth":start.month,
             "startday":start.day,
             "startyear":start.year,
@@ -375,7 +375,7 @@ class Gage(Resource):
             payload[gauge_param] = 'on'
         print(payload)
 
-        r = requests.post(app.config['URL_GAGE'], data=payload)
+        r = requests.post(application.config['URL_GAGE'], data=payload)
 
         data = parse_response_html(r)
 
@@ -429,9 +429,9 @@ class Garr(Resource):
         
         payload = {
             "pixels":pixels,
-            "_userid":app.config['USERID'],
-            "_passwd":app.config['PASSWD'],
-            "_userptr":app.config['USERPTR'],
+            "_userid":application.config['USERID'],
+            "_passwd":application.config['PASSWD'],
+            "_userptr":application.config['USERPTR'],
             "startmonth":start.month,
             "startday":start.day,
             "startyear":start.year,
@@ -449,7 +449,7 @@ class Garr(Resource):
         }
         print(payload)
         
-        r = requests.post(app.config['URL_GARR'], data=payload)
+        r = requests.post(application.config['URL_GARR'], data=payload)
         print(r.text)
 
         data = parse_response_html(r)
