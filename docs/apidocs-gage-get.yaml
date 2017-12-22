@@ -1,0 +1,49 @@
+Return rainfall totals from 3RWW rain gauges.
+Return rainfall totals over a specified period from 3RWW's rain gauge system. By default, this returns hourly totals for for all gauges from the last 24 hours.
+---
+tags: 
+  - gauge
+parameters:
+  - name: ids
+    in: query
+    type: array
+    items:
+      type: integer
+    allowEmptyValue: true
+    description: list of gauges by ID number
+  - name: dates
+    in: query
+    type: string
+    allowEmptyValue: true
+    description: ISO 8061 dateTime. e.g., 2016-08-28T18:00. To spec start/end, use a slash, e.g., 2016-08-28T14:00/2016-08-29T02:00
+  - name: interval
+    in: query
+    type: string
+    enum: ["Daily", "Hourly", "15-minute"]
+    default: "Hourly"
+    allowEmptyValue: true
+  - name: keyed_by
+    in: query
+    type: string
+    default: "location"
+    enum: ["time", "location"]
+    allowEmptyValue: true
+  - name: zerofill
+    in: query
+    type: boolean
+    default: False
+    description: Include data points with zero values
+    allowEmptyValue: true
+responses:
+  200:
+    description: 
+    examples: {
+          "id1" : [
+              {"time1": "value"},
+              {"time2": "value"}
+          ],
+          "id2" : [
+              {"time1": "value"},
+              {"time2": "value"}
+          ]
+      }
