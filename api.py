@@ -31,24 +31,24 @@ import json
 
 # ----------------------------------#
 # FLASK APP
-app = Flask(__name__)
-app.debug = True
-app.config['USERID'] = 'guest'
-app.config['PASSWD'] = 'guest'
-app.config['USERPTR'] = '00000000/00000000/00000000/01010002/54550802/44010828/01110084/AA9A71A2'
-app.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:Main.hist2_html;trp:,,/data"
-app.config['URL_GARR'] = "http://web.3riverswetweather.org/trp:Region.show_pixel_data_html;trp:,,/data"
+application = Flask(__name__)
+application.debug = False
+application.config['USERID'] = 'guest'
+application.config['PASSWD'] = 'guest'
+application.config['USERPTR'] = '00000000/00000000/00000000/01010002/54550802/44010828/01110084/AA9A71A2'
+application.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:Main.hist2_html;trp:,,/data"
+application.config['URL_GARR'] = "http://web.3riverswetweather.org/trp:Region.show_pixel_data_html;trp:,,/data"
 
 # ReST-ful API via Flask-Restful
 api = Api(app)
 
 # Swagger API docs
-app.config['SWAGGER'] = {
+application.config['SWAGGER'] = {
     'title': '3RWW Rainfall API (beta)',
     'uiversion': 2
 }
 swag = Swagger(
-    app, 
+    application, 
     template={
         "swagger": "2.0",
         "info": {
@@ -499,7 +499,7 @@ class Grid(Resource):
 # ----------------------------------------------------------------------------
 # ROUTES
 
-@app.route('/', methods=['GET'])
+@application.route('/', methods=['GET'])
 def home():
     return redirect('/apidocs/',code=302)
 
@@ -508,4 +508,4 @@ api.add_resource(Gage, '/gauge/')
 api.add_resource(Grid, '/garrd/grid')
 
 if __name__ == "__main__":
-    app.run()
+    application.run()

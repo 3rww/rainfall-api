@@ -1,4 +1,13 @@
 .vscode/
 __pycache__/
 *.pyc
-pipfile.lock
+Pipfile.lock
+
+# Elastic Beanstalk Files
+
+.elasticbeanstalk/*
+
+!.elasticbeanstalk/*.cfg.yml
+
+!.elasticbeanstalk/*.global.yml
+
