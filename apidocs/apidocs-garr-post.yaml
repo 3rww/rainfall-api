@@ -1,0 +1,67 @@
+Get Gauge-Adjusted Radar Rainfall Data for Allegheny County, PA, USA.
+Get Gauge-Adjusted Radar Rainfall Data for Allegheny County, PA, USA. This data is interpolated from rain gauges and NEXRAD radar data at a 1 kilometer grid resolution across Allegheny County, Pennsylvania. This data is available from January 1, 2000 to present at 15-minute intervals for 2,313 virtual rain gauges locations. While there are over 1.4 billion data points available, please don't think you'll be able to request them all at once!
+---
+tags: 
+  - garrd
+parameters:
+  - name: dates
+    in: query
+    type: string
+    allowEmptyValue: true
+    description: ISO 8061 dateTime. e.g., 2004-09-17T18:00. To spec start/end, use a ISO 8061 dateTime range, e.g., 2004-09-17T03:00/2004-09-18T00:00
+  - name: interval
+    in: query
+    type: string
+    enum: ["Daily", "Hourly", "15-minute"]
+    default: "Hourly"
+    allowEmptyValue: true
+  - name: basin
+    in: query
+    type: string
+    default: "all basins"
+    enum: ["all basins", "Chartiers Creek", "Lower Ohio + Girty's Run", "Main Rivers", "Saw Mill Run", "Turtle Thompson", "Upper Allegheny Pine Creek", "Upper Monongahela"]
+    allowEmptyValue: true
+    description: Basin for which to get rainfall data. This is effectively a shortcut for the pixels parameter. Defaults to all basins. If pixels are specified in the pixels parameter, this parameter will be ignored.
+  - name: ids
+    in: query
+    type: array
+    items:
+      type: integer
+    allowEmptyValue: true
+    description: List of pixels to return, using the six-digit pixel ID number. Defaults to None. This parameter will override the basin parameter. If no basin is specified in the basin parameter, and this parameter is left empty, all pixels will be returned.
+  # - name: keyed_by
+  #   in: query
+  #   type: string
+  #   default: "location"
+  #   enum: ["time", "location"]
+  #   allowEmptyValue: true
+  - name: zerofill
+    in: query
+    type: boolean
+    default: false
+    description: Include data points with zero values.
+    allowEmptyValue: true    
+responses:
+  200:
+    description: 
+    # examples: 
+    #   - response_by_location: {
+    #       "id1" : [
+    #           {"time1": "value"},
+    #           {"time2": "value"}
+    #       ],
+    #       "id2" : [
+    #           {"time1": "value"},
+    #           {"time2": "value"}
+    #       ]
+    #   }
+    #   - response_by_time: {
+    #       "time1" : [
+    #           {"id1": "value"},
+    #           {"id2": "value"}
+    #       ],
+    #       "time2" : [
+    #           {"id1": "value"},
+    #           {"id2": "value"}
+    #       ]
+    #   }

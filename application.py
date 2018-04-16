@@ -1,7 +1,7 @@
 '''
 api.py
 
-A lightweight Flask application that provides a clean API for the legacy 3RWW 
+A lightweight Flask application that provides a clean API for the legacy 3RWW
 rainfall data (rain gauge and gauage-adjusted radar rainfall data).
 
 '''
@@ -32,12 +32,10 @@ import json
 # ----------------------------------#
 # FLASK APP
 application = Flask(__name__)
-application.debug = False
-application.config['USERID'] = 'guest'
-application.config['PASSWD'] = 'guest'
-application.config['USERPTR'] = '00000000/00000000/00000000/01010002/54550802/44010828/01110084/AA9A71A2'
-application.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:Main.hist2_html;trp:,,/data"
-application.config['URL_GARR'] = "http://web.3riverswetweather.org/trp:Region.show_pixel_data_html;trp:,,/data"
+application.debug = True
+
+application.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:API.raingauge"
+application.config['URL_GARR'] = "http://web.3riverswetweather.org/trp:API.pixel"
 
 # ReST-ful API via Flask-Restful
 api = Api(application)
@@ -45,20 +43,19 @@ api = Api(application)
 # Swagger API docs
 application.config['SWAGGER'] = {
     'title': '3RWW Rainfall API (beta)',
-    'uiversion': 2
+    'uiversion': 3
 }
 swag = Swagger(
-    application, 
+    application,
     template={
-        "swagger": "2.0",
         "info": {
             "title": "3RWW Rainfall API (beta)",
             "description": "API for rainfall data collected and maintained by 3 Rivers Wet Weather",
             "contact": {
-            "responsibleOrganization": "CivicMapper",
-            "responsibleDeveloper": "Christian Gass",
-            "email": "christian.gass@civicmapper.com",
-            "url": "http://www.3riverswetweather.org/municipalities/calibrated-radar-rainfall-data",
+                "responsibleOrganization": "CivicMapper",
+                "responsibleDeveloper": "Christian Gass",
+                "email": "christian.gass@civicmapper.com",
+                "url": "http://www.3riverswetweather.org/municipalities/calibrated-radar-rainfall-data",
             },
             "version": "0.1.0"
         },
@@ -75,27 +72,33 @@ swag = Swagger(
 # HELPERS
 
 # preload a list of pixel IDs from a file (utilized by the GARR endpoint)
-pixel_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)),"data","grid_centroids.csv")
+pixel_csv = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), "data", "grid_centroids.csv")
+basin_lookup_file = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), "data", "lookup_basins.json")
 all_pixels = list(etl.fromcsv(pixel_csv).values('id'))
+with open(basin_lookup_file, mode='r') as fp:
+    basin_pixels = json.load(fp)
+
 
 def handle_utc(datestring, direction="to_local", local_zone='America/New_York'):
     """ parse from a date/time string
     """
-    
+
     # METHOD 1: Hardcode zones:
     from_zone = tz.gettz('UTC')
     to_zone = tz.gettz(local_zone)
 
     # METHOD 2: Auto-detect zones:
-    #from_zone = tz.tzutc()
-    #to_zone = tz.tzlocal()
-    
+    # from_zone = tz.tzutc()
+    # to_zone = tz.tzlocal()
+
     # parse the ISO 8601-formatted, UTC (zulu) string into a datetime object.
     # e.g., '2017-03-03T17:00:00Z'
     t = parse(datestring)
-    
-    if direction == "to_local" or direction == "from_utc": 
-        # Tell the datetime object that it's in UTC time zone since 
+
+    if direction == "to_local" or direction == "from_utc":
+        # Tell the datetime object that it's in UTC time zone since
         # datetime objects are 'naive' by default
         t = t.replace(tzinfo=from_zone)
 
@@ -104,49 +107,64 @@ def handle_utc(datestring, direction="to_local", local_zone='America/New_York'):
 
         # return result as ISO 8601-formatted string, now with UTC offset
         # e.g., '2017-03-03T12:00:00-05:00'
-        #return tc.isoformat()
+        # return tc.isoformat()
         return tc
 
     elif direction == "to_utc" or direction == "from_local":
-        
+
         t = t.replace(tzinfo=to_zone)
-        
+
         # Convert time zone
         tc = t.astimezone(from_zone)
-        
-        #return tc.isoformat()
+
+        # return tc.isoformat()
         return tc
-    
+
     else:
         raise Exception
-        #print("incorrect datetime conversion direction string (must be 'to_utc' or 'to_local')")
+        # print("incorrect datetime conversion direction string (must be 'to_utc' or 'to_local')")
+
+
+def datetime_last24hours():
+    '''return start and ending date-time ISO strings, where the end time is
+    exactly now, and the start time is exactly 24 hours ago.
+    '''
+    now = datetime.now()
+    yesterday = now - timedelta(days=1)
+    start = handle_utc(yesterday.isoformat())
+    end = handle_utc(now.isoformat())
+    return start, end
+
 
 def parse_pixels(list_of_ids):
-    '''given list of 6-digit pixel ids, form the expected format of the API 
+    '''given list of 6-digit pixel ids, form the expected format of the API
     pixel argument
     '''
-    return ";".join(["{0},{1}".format(i[:3],i[3:]) for i in list_of_ids])
+    return ";".join(["{0},{1}".format(i[:3], i[3:]) for i in list_of_ids])
+
 
 def reverse_parse_pixels(pixels_arg):
     '''turns semi-colon and comma-delimited pixels arg into a list of 6 digit pixel ids
     '''
-    return ["{0}{1}".format(s.split(",")[0],s.split(",")[1]) for s in pixels_arg.split(";")]
+    return ["{0}{1}".format(s.split(",")[0], s.split(",")[1]) for s in pixels_arg.split(";")]
+
 
 def reverse_parse_pixels_xy(pixels_arg):
-    '''turns semi-colon and comma-delimited pixels arg into a dictionary of 
+    '''turns semi-colon and comma-delimited pixels arg into a dictionary of
     its arbitrary x,y coordinates
     '''
-    return [{"x":s.split(",")[0],"y":s.split(",")[1]} for s in pixels_arg.split(";")]
+    return [{"x": s.split(",")[0], "y":s.split(",")[1]} for s in pixels_arg.split(";")]
 
-def parse_response_html(response):
+
+def parse_response_html(page):
     '''
-    Takes the HTML page returned by the 3RWW Rainfall site and turns it into 
+    Takes the HTML page returned by the 3RWW Rainfall site and turns it into
     structured data. Returns a Python PETL table object.
     '''
     t1 = []
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(page.text, 'html.parser')
     # this gets the header elements as strings in a list
-    #hrow = soup.table.tr.find_all_next("th")
+    # hrow = soup.table.tr.find_all_next("th")
     th = soup.table.find_next("tr")
     realheader = [
         x.contents[0].replace(',', '') for x in th.children
@@ -162,14 +180,14 @@ def parse_response_html(response):
             each.contents[0].lstrip().rstrip()
             # we only want the rows that are tags and not tagged "center"
             for each in tr
-                if (
-                    isinstance(each, bs4.element.Tag)
-                    and
-                    each.findChild("center") is None
-                )
+            if (
+                isinstance(each, bs4.element.Tag)
+                and
+                each.findChild("center") is None
+            )
         ]
-        #timestamp = realrow[0]
-        #datapoints = realrow[1:]
+        # timestamp = realrow[0]
+        # datapoints = realrow[1:]
         t1.append(realrow)
 
     # use petl to give us the flexibility to return multiple types/structures
@@ -177,117 +195,174 @@ def parse_response_html(response):
     t2 = etl.fromdicts(d, header=realheader)
     return t2
 
-def return_json(petl_table, method):
-    '''
-    takes a petl table and transform it into an ordered dictionary, 
-    keyed by either time or the ID of the thing (rain gauge or GARR pixel)
 
-    Used for post-processing the results from the call to 3RWW's legacy rainfall
-    data system.
+def transform_teragon_csv(teragon_csv):
+    """transform Teragon's CSV response into a python dictionary,
+    which mirrors the JSON response we want to provide to API clients
 
-    response_by_location = {
-        "id1" : [
-            {"time1": "value"},
-            {"time2": "value"}
-        ],
-        "id2" : [
-            {"time1": "value"},
-            {"time2": "value"}
-        ]
-    }
-    response_by_time = {
-        "time1" : [
-            {"id1": "value"},
-            {"id2": "value"}
-        ],
-        "time2" : [
-            {"id1": "value"},
-            {"id2": "value"}
-        ]
-    }
-    '''
-    print(method)
+    Arguments:
+        teragon_csv {reference} -- reference to a CSV table on disk 
+        or in memory
 
-    if method not in ["time","location"]:
-        m = "location"
-    else:
-        m = method
+    Returns:
+        {dict} -- a dictionary representing the Terragon table, transformed
+        for ease of use in spatial/temporal data vizualation
+    """
 
-    if m == "time":
-        print("by time")
-        records = list(etl.dicts(petl_table))
-    elif m == "location" or method is None:
-        print("by location")
-        records = list(etl.dicts(etl.transpose(petl_table)))
+    petl_table = etl.fromcsv(teragon_csv)
+    # get iterable of column pairs (minus 'Timestamp')
+    # this is used to group the double columns representing a single
+    # data point in Teragon's CSV
 
-    d = {}
-    for rec in records:
-        if 'Timestamp' in rec.keys():
-            n = rec.pop('Timestamp')
-        elif 'TOTAL:' in rec.keys():
-            n = rec.pop('TOTAL:')
+    h = list(etl.header(petl_table))
+    xy_cols = zip(* [iter(h[1:])] * 2)
+
+    # make a new header row
+    new_header = ['Timestamp']
+    fields_to_cut = []
+    for each in xy_cols:
+        # print(each)
+        # correct id, assembled from columns
+        px, py = each[0], each[1]
+        # assemble new id column, to replace of PX column (which has data)
+        id_col = "{0}{1}".format(px[:3], px[4:])
+        # assemble new notes column, to replace of PY column (which has notes)
+        notes_col = "{0}-n".format(id_col)
+        # add those to our new header (array)
+        new_header.extend([id_col, notes_col])
+        # track fields that we might want to remove
+        fields_to_cut.append(notes_col)
+
+    # transform the table
+    table = etl \
+        .setheader(petl_table, new_header) \
+        .cutout(*tuple(fields_to_cut))  \
+        .select('Timestamp', lambda v: v.upper() != 'TOTAL')  \
+        .convert('Timestamp', lambda t: parse(t).isoformat())  \
+        .replaceall('N/D', None)  \
+        .dicts()
+
+    rows = []
+    for row in table:
+        data = []
+        for d in row.items():
+            if d[0] != 'Timestamp':
+                data.append({
+                    'id': d[0],
+                    'v': float(d[1])
+                })
+        rows.append({
+            "id": row['Timestamp'],
+            "d": data
+        })
+    # print(rows)
+    # print(json.dumps(rows, indent=2))
+    return rows
+
+
+def parse_common_teragon(args):
+    """handles parsing and defaults for common Teragon API 
+    arguments (everything except gauge IDs or GARR pixel IDs)
+
+    Arguments:
+        args {obj} -- Flask-Restful args parser object
+
+    Returns:
+        dict -- mostly complete payload for the Teragon API
+    """
+
+    # handle the dates; default to past 24 hours if no args
+    if args['dates']:
+        parsed_dates = inputs.iso8601interval(args['dates'])
+        if parsed_dates:
+            start, end = parsed_dates
         else:
-            n = 'null'
-        d[n] = rec
-    d2 = OrderedDict(sorted(d.items(), key=lambda t: t[0]))
+            start, end = datetime_last24hours()
+    else:
+        start, end = datetime_last24hours()
 
-    return d2
+    # if args['keyed_by'] not in ["time", "location"]:
+    #     keyed_by = "time"
+    # else:
+    #     keyed_by = args['keyed_by']
 
-def datetime_last24hours():
-    '''return start and ending date-time ISO strings, where the end time is
-    exactly now, and the start time is exactly 24 hours ago.
-    '''
-    now = datetime.now()
-    yesterday = now - timedelta(days=1)
-    start = handle_utc(yesterday.isoformat())
-    end = handle_utc(now.isoformat())
-    return start, end
+    # handle the interval, default to hourly if no args
+    if args['interval'] not in ["Daily", "Hourly", "15-minute"]:
+        interval = "Hourly"
+    else:
+        interval = args['interval']
+
+    # transform zerofill, default to off if no args
+    if args['zerofill'] == True:
+        zerofill = 'yes'
+    else:
+        zerofill = ''
+
+    return {
+        "startmonth": start.month,
+        "startday": start.day,
+        "startyear": start.year,
+        "starthour": start.hour,
+        "endmonth": end.month,
+        "endday": end.day,
+        "endyear": end.year,
+        "endhour": end.hour,
+        "interval": interval,
+        "zerofill": zerofill,
+    }
 
 
 # ----------------------------------------------------------------------------
 # REST API Arguments
 # define parsers/validation for all types of request params
-# NOTE: the validation functionality of reqparse somewhat interferes with 
-# Flasgger's validation; we also have some simple default reversion built 
+# NOTE: the validation functionality of reqparse somewhat interferes with
+# Flasgger's validation; we also have some simple default reversion built
 # into the request functions. We'll likely clean most of this up in the future.
 
 parser = reqparse.RequestParser()
 
-parser.add_argument('ids', type=str, help='List of rain gauge IDs, e.g.:1,2,3',required=False)
-parser.add_argument('pixels',type=str, help='List of pixel IDs, e.g.:1,2,3',required=False)
 parser.add_argument(
-    'dates', 
-    type=str, 
-    help='Date-time(s) in iso8601 format(s). A single date-time returns just that date. An interval (e.g.: "2016-08-28T14:00/2016-08-29T06:00") returns all data in between.',
+    'ids', type=str, help='List of rain gauge IDs or GARR pixels', required=False)
+parser.add_argument(
+    'basin',
+    type=str,
+    choices=["all basins", "Chartiers Creek", "Lower Ohio + Girty's Run", "Main Rivers",
+             "Saw Mill Run", "Turtle Thompson", "Upper Allegheny Pine Creek", "Upper Monongahela", "", None],
+    help='Basin for which to get rainfall data. This is effectively a shortcut for the ids parameter. Defaults to all basins. If ids are specified in the ids parameter, this parameter will be ignored.',
+    required=False)
+parser.add_argument(
+    'dates',
+    type=str,
+    help='Date-time(s) in ISO 8601 datetime format. A single date-time returns just that date. An interva lISO 8601 datetime range (e.g.: "2016-08-28T14:00/2016-08-29T06:00") returns all data in between.',
     required=False
 )
 parser.add_argument(
-    'interval', 
-    type=str, 
+    'interval',
+    type=str,
     help='Interval of rainfall data: "Daily", "Hourly", "15-minute". Defaults to "Hourly"',
     choices=["Daily", "Hourly", "15-minute", "", None],
     default="Hourly",
     required=False
 )
 parser.add_argument(
-    'zerofill', 
-    type=str, 
-    help='Include data points with zero values',
+    'zerofill',
+    type=str,
+    help='Include data points with zero values.',
     # choices=["True", "False", "", True, False, None],
     # default=False,
     required=False
 )
+# parser.add_argument(
+#     'keyed_by',
+#     type=str,
+#     help='determines how data is transformed: "time" or "location"',
+#     choices=["time", "location", "", None],
+#     default="time",
+#     required=False
+# )
 parser.add_argument(
-    'keyed_by', 
-    type=str, 
-    help='determines how data is transformed: "time" or "location"',
-    choices=["time", "location", "", None],
-    default="time",
-    required=False
-)
-parser.add_argument(
-    'geom', 
-    type=str, 
+    'geom',
+    type=str,
     help='The geometry type of the garr grid: "polygon" returns the grid; "point" returns the centroids of the grid cells.',
     choices=["point", "polygon"],
     default="polygon",
@@ -297,179 +372,79 @@ parser.add_argument(
 # ----------------------------------#
 # REST API Resources
 
+
 class Gage(Resource):
-    @swag_from('docs/apidocs-gage-get.yaml')
+    @swag_from('apidocs/apidocs-gage-get.yaml')
     def get(self):
-        '''
-        http://localhost:5000/gauges/?ids=[10,11,12,13,14,15]&dates=2016-08-28T20:00/2016-08-29T06:00&interval=Hourly
-
-        defaults:
-            dates: past 24 hours
-            ids: all ids (all gauges)
-            keyed_by: time
-
-        '''
 
         # get the request args
         args = parser.parse_args()
-        print(args)
+        # print(args)
 
-        # handle the ids; default to all if not provided
+        # assemble the payload
+        payload = parse_common_teragon(args)
+
+        # handle the ids parameter; default to all if not provided
         if not args['ids']:
             ids = [x for x in range(1, 34)]
         else:
             ids = args['ids'].split(",")
+        payload['gauges'] = ids
 
-        # handle the dates; default to past 24 hours if no args
-        if args['dates']:
-            parsed_dates = inputs.iso8601interval(args['dates'])
-            if parsed_dates: 
-                start, end = parsed_dates
-            else:
-                start, end = datetime_last24hours()
-        else:
-            start, end = datetime_last24hours()
+        # print(payload)
 
-        if args['keyed_by'] not in ["time", "location"]:
-            keyed_by = "time"
-        else:
-            keyed_by = args['keyed_by']
-
-        # handle the interval, default to hourly if no args
-        if args['interval'] not in ["Daily", "Hourly", "15-minute"]:
-            interval = "Hourly"
-        else:
-            interval = args['interval']
-
-        # transform zerofill, default to off if no args
-        if args['zerofill'] == True:
-            zerofill = 'on'
-        else:
-            zerofill = 'off'
-
-        # assemble the payload
-        payload = {
-            "_userid":application.config['USERID'],
-            "_passwd":application.config['PASSWD'],
-            "_userptr":application.config['USERPTR'],
-            "startmonth":start.month,
-            "startday":start.day,
-            "startyear":start.year,
-            "starthour":start.hour,
-            "targetday":"{0}/{1}/{2}".format(start.year,start.month,start.day), #str: "2017/3/1" , #str: "2017/3/1" 
-            "endmonth":end.month,
-            "endday":end.day,
-            "endyear":end.year,
-            "endhour":end.hour,
-            "targetday2":"{0}/{1}/{2}".format(end.year,end.month,end.day), #str: "2017/3/1" , #str: "2017/3/30"
-            "interval": interval, #str: "Daily", "Hourly" "15-minute"
-            "zerofill": zerofill, #str: "on", "off"
-            # "view.x":viewx, #???? 26
-            # "view.y":viewy, #???? 5
-        }
-        
-        # build gauge params from list of gauge numbers
-        print(ids)
-        for each in ids:
-            gauge_param = "g{0}".format(each)
-            payload[gauge_param] = 'on'
-        print(payload)
-
-        r = requests.post(application.config['URL_GAGE'], data=payload)
-
-        data = parse_response_html(r)
-
-        return return_json(data, keyed_by)
+        # make the request
+        response = requests.post(application.config['URL_GAGE'], data=payload)
+        # post-process and return the response
+        table = etl.MemorySource(response.text.encode())
+        return transform_teragon_csv(table)
 
 
 class Garr(Resource):
-    @swag_from('docs/apidocs-garr-get.yaml')
-    def get(self):
-        '''
-        http://localhost:5000/garr/?pixels=147125,148125,149125,150125,147126,148126,149126,150126,147127,148127,149127,150127,147128,148128,149128,150128&dates=2016-08-28T20:00/2016-08-29T06:00&interval=Hourly&zerofill=on
-        '''
+    @swag_from('apidocs/apidocs-garr-post.yaml')
+    def post(self):
 
         # get the request args
         args = parser.parse_args()
-        print(args)
+        # print(args)
 
-        # handle the pixels; default to all if not provided
-        if not args['pixels']:
-            pixels = ";".join(all_pixels)
-        else:
-            pixels = parse_pixels(args['pixels'].split(","))
+        # assemble the payload
+        payload = parse_common_teragon(args)
 
-        # handle the dates; default to past 24 hours if no args
-        if args['dates']:
-            parsed_dates = inputs.iso8601interval(args['dates'])
-            if parsed_dates: 
-                start, end = parsed_dates
+        # handle the pixels or basin parameters
+        # if pixels not provided
+        if not args['ids']:
+            # if basin not provided
+            if not args['basin']:
+                # use all pixels
+                pixels = ";".join(all_pixels)
             else:
-                start, end = datetime_last24hours()
+                # if basin is provided but pixels not, use basin
+                pixels = parse_pixels(basin_pixels[args['basin']])
         else:
-            start, end = datetime_last24hours()
+            # use all pixels
+            pixels = parse_pixels(args['ids'].split(","))
+        payload['pixels'] = pixels
 
+        # print(payload)
 
-        if args['keyed_by'] not in ["time", "location"]:
-            keyed_by = "time"
-        else:
-            keyed_by = args['keyed_by']
-
-        # handle the interval, default to hourly if no args
-        if args['interval'] not in ["Daily", "Hourly", "15-minute"]:
-            interval = "Hourly"
-        else:
-            interval = args['interval']
-
-        # transform zerofill, default to off if no args
-        if (args['zerofill'] in ['True','true']) or (args['zerofill'] == True):
-            zerofill = 'on'
-        else:
-            zerofill = 'off'
-        
-        payload = {
-            "pixels":pixels,
-            "_userid":application.config['USERID'],
-            "_passwd":application.config['PASSWD'],
-            "_userptr":application.config['USERPTR'],
-            "startmonth":start.month,
-            "startday":start.day,
-            "startyear":start.year,
-            "starthour":start.hour,
-            "targetday":"{0}/{1}/{2}".format(start.year,start.month,start.day), #str: "2017/3/1" , #str: "2017/3/1" 
-            "endmonth":end.month,
-            "endday":end.day,
-            "endyear":end.year,
-            "endhour":end.hour,
-            "targetday2":"{0}/{1}/{2}".format(end.year,end.month,end.day), #str: "2017/3/1" , #str: "2017/3/30"
-            "interval": interval, #str: "Daily", "Hourly" "15-minute"
-            "zerofill": zerofill, #str: "on", "off"
-            # "view.x":viewx, #???? 26
-            # "view.y":viewy, #???? 5
-        }
-        print(payload)
-        
-        r = requests.post(application.config['URL_GARR'], data=payload)
-        print(r.text)
-
-        data = parse_response_html(r)
-
-        return return_json(data, keyed_by)
+        # make the request
+        response = requests.post(application.config['URL_GARR'], data=payload)
+        # post-process and return the response
+        table = etl.MemorySource(response.text.encode())
+        return transform_teragon_csv(table)
 
 
 class Grid(Resource):
-    @swag_from('docs/apidocs-garrgrid-get.yaml')
+    @swag_from('apidocs/apidocs-garrgrid-get.yaml')
     def get(self):
-        '''
-        http://localhost:5000/garr/grid
-        '''
 
         # get the request args
         args = parser.parse_args()
-        print(args)        
+        # print(args)
 
         # handle the geom argument; default to polygon
-        if args['geom'] not in ["point","polygon"]:
+        if args['geom'] not in ["point", "polygon"]:
             shape = "polygon"
         else:
             shape = args['geom']
@@ -480,15 +455,9 @@ class Grid(Resource):
         elif shape == "point":
             pixel_json_file_name = "grid_centroids.geojson"
 
-        # OLD - load pixel data from csv, convert to GeoJSON-compliant python dict
-        # pixel_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "grid.csv")
-        # pixels = etl.fromcsv(pixel_csv).dicts()
-        # features = []
-        # features.append(Feature(geometry=Point((float(each['X']),float(each['Y']))), properties={"id": each['PIXEL']}))
-        # return FeatureCollection(features)
-
         # load geojson reference file from disk and return it as python dict
-        pixel_json_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", pixel_json_file_name)
+        pixel_json_file_path = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), "data", pixel_json_file_name)
         with open(pixel_json_file_path) as f:
             pixel_json = json.load(f)
             return pixel_json
@@ -501,7 +470,8 @@ class Grid(Resource):
 
 @application.route('/', methods=['GET'])
 def home():
-    return redirect('/apidocs/',code=302)
+    return redirect('/apidocs/', code=302)
+
 
 api.add_resource(Garr, '/garrd/')
 api.add_resource(Gage, '/gauge/')
