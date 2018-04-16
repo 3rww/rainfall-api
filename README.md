@@ -4,11 +4,11 @@
 
 This API taps the existing legacy 3RWW rainfall website for data, and returns it back in a temporally- or spatially-indexed, structured `json` format. It is designed to enable straightforward, programmatic access to 3RWW's amazing trove of historical rainfall data for Allegheny County,and in turn will support the planned development of new graphic user interface(s) for that data.
 
-This application is in beta, and it's likely that the structure of the requests, endpoints, and other things will change.
+This application should be considered an alpha product: it's likely that the structure of the requests, endpoints, and other things will change; error handling is rudimentary and useful error messages are basically non-existent; the API documentation is not complete.
 
 # Usage
 
-Head to `/apidocs` to explore the API.
+Head to `http://3rww-rainfall-api.civicmapper.com/apidocs/` to explore the endpoints and documentation in an interactive Swagger UI.
 
 # Stack
 
