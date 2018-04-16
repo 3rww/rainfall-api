@@ -143,6 +143,13 @@ def parse_pixels(list_of_ids):
     return ";".join(["{0},{1}".format(i[:3], i[3:]) for i in list_of_ids])
 
 
+def parse_gauge_ids(list_of_ids):
+    """give list of rain gauge ids, form the expected format of the API gauge 
+    ID argument
+    """
+    return ",".join([i for i in list_of_ids])
+
+
 def reverse_parse_pixels(pixels_arg):
     '''turns semi-colon and comma-delimited pixels arg into a list of 6 digit pixel ids
     '''
@@ -210,6 +217,7 @@ def transform_teragon_csv(teragon_csv):
     """
 
     petl_table = etl.fromcsv(teragon_csv)
+    # print(petl_table)
     # get iterable of column pairs (minus 'Timestamp')
     # this is used to group the double columns representing a single
     # data point in Teragon's CSV
@@ -223,9 +231,9 @@ def transform_teragon_csv(teragon_csv):
     for each in xy_cols:
         # print(each)
         # correct id, assembled from columns
-        px, py = each[0], each[1]
+        id_col, note_col = each[0], each[1]
         # assemble new id column, to replace of PX column (which has data)
-        id_col = "{0}{1}".format(px[:3], px[4:])
+        # id_col = "{0}{1}".format(px[:3], px[4:])
         # assemble new notes column, to replace of PY column (which has notes)
         notes_col = "{0}-n".format(id_col)
         # add those to our new header (array)
@@ -247,9 +255,13 @@ def transform_teragon_csv(teragon_csv):
         data = []
         for d in row.items():
             if d[0] != 'Timestamp':
+                if d[1]:
+                    v = float(d[1])
+                else:
+                    v = d[1]
                 data.append({
                     'id': d[0],
-                    'v': float(d[1])
+                    'v': v
                 })
         rows.append({
             "id": row['Timestamp'],
@@ -388,13 +400,15 @@ class Gage(Resource):
         if not args['ids']:
             ids = [x for x in range(1, 34)]
         else:
-            ids = args['ids'].split(",")
+            ids = parse_gauge_ids(args['ids'].split(","))
+        print(ids)
         payload['gauges'] = ids
 
-        # print(payload)
+        print(payload)
 
         # make the request
         response = requests.post(application.config['URL_GAGE'], data=payload)
+        print(response.request.body)
         # post-process and return the response
         table = etl.MemorySource(response.text.encode())
         return transform_teragon_csv(table)
@@ -425,11 +439,11 @@ class Garr(Resource):
             # use all pixels
             pixels = parse_pixels(args['ids'].split(","))
         payload['pixels'] = pixels
-
-        # print(payload)
+        print(payload)
 
         # make the request
         response = requests.post(application.config['URL_GARR'], data=payload)
+        print(response.request.body)
         # post-process and return the response
         table = etl.MemorySource(response.text.encode())
         return transform_teragon_csv(table)
@@ -473,9 +487,9 @@ def home():
     return redirect('/apidocs/', code=302)
 
 
-api.add_resource(Garr, '/garrd/')
-api.add_resource(Gage, '/gauge/')
-api.add_resource(Grid, '/garrd/grid')
+api.add_resource(Garr, '/api/garrd/')
+api.add_resource(Gage, '/api/gauge/')
+api.add_resource(Grid, '/api/garrd/grid')
 
 if __name__ == "__main__":
     application.run()
