@@ -7,8 +7,8 @@ rainfall data (rain gauge and gauage-adjusted radar rainfall data).
 '''
 
 # standard library
-from collections import OrderedDict
 import os
+# from collections import OrderedDict
 # framework
 from flask import Flask, render_template, redirect, url_for
 # API
@@ -25,6 +25,7 @@ import bs4
 from bs4 import BeautifulSoup
 # data transformation
 import petl as etl
+from sortedcontainers import SortedDict
 # geojson spec
 # from geojson import Point, Feature, FeatureCollection
 import json
@@ -144,7 +145,7 @@ def parse_pixels(list_of_ids):
 
 
 def parse_gauge_ids(list_of_ids):
-    """give list of rain gauge ids, form the expected format of the API gauge 
+    """give list of rain gauge ids, form the expected format of the API gauge
     ID argument
     """
     return ",".join([i for i in list_of_ids])
@@ -203,13 +204,15 @@ def parse_response_html(page):
     return t2
 
 
-def transform_teragon_csv(teragon_csv):
+def transform_teragon_csv(teragon_csv, transpose=False, indexed=False):
     """transform Teragon's CSV response into a python dictionary,
     which mirrors the JSON response we want to provide to API clients
 
     Arguments:
-        teragon_csv {reference} -- reference to a CSV table on disk 
+        teragon_csv {reference} -- reference to a CSV table on disk
         or in memory
+        transpose {boolean} -- transpose Teragon table
+        indexed {boolean} -- return dictionary in indexed format or as records
 
     Returns:
         {dict} -- a dictionary representing the Terragon table, transformed
@@ -247,33 +250,57 @@ def transform_teragon_csv(teragon_csv):
         .cutout(*tuple(fields_to_cut))  \
         .select('Timestamp', lambda v: v.upper() != 'TOTAL')  \
         .convert('Timestamp', lambda t: parse(t).isoformat())  \
-        .replaceall('N/D', None)  \
-        .dicts()
+        .replaceall('N/D', None)
 
-    rows = []
-    for row in table:
-        data = []
-        for d in row.items():
-            if d[0] != 'Timestamp':
-                if d[1]:
-                    v = float(d[1])
-                else:
-                    v = d[1]
-                data.append({
-                    'id': d[0],
-                    'v': v
-                })
-        rows.append({
-            "id": row['Timestamp'],
-            "d": data
-        })
-    # print(rows)
-    # print(json.dumps(rows, indent=2))
-    return rows
+    # transpose the table, so that rows are cells/gauges and columns are times
+    # (note that this operation can take a while)
+    if transpose:
+        table = etl.transpose(table)
+
+    # if indexed: format data where cells/gauges or times are keys, and
+    # rainfall amounts are values
+    # otherwise, format as nested records (arrays of dicts)
+
+    if indexed:
+        data = SortedDict()
+        for row in etl.dicts(table):
+            inside = SortedDict()
+            for d in row.items():
+                if d[0] != 'Timestamp':
+                    if d[1]:
+                        v = float(d[1])
+                    else:
+                        v = d[1]
+                    inside[d[0]] = v
+            data[row['Timestamp']] = inside
+        return data
+
+    else:
+        rows = []
+        # create a nested dictionary from the table
+        for row in etl.dicts(table):
+            data = []
+            for d in row.items():
+                if d[0] != 'Timestamp':
+                    if d[1]:
+                        v = float(d[1])
+                    else:
+                        v = d[1]
+                    data.append({
+                        'id': d[0],
+                        'v': v
+                    })
+            rows.append({
+                "id": row['Timestamp'],
+                "d": data
+            })
+        # print(rows)
+        # print(json.dumps(rows, indent=2))
+        return rows
 
 
 def parse_common_teragon(args):
-    """handles parsing and defaults for common Teragon API 
+    """handles parsing and defaults for common Teragon API
     arguments (everything except gauge IDs or GARR pixel IDs)
 
     Arguments:
@@ -292,11 +319,6 @@ def parse_common_teragon(args):
             start, end = datetime_last24hours()
     else:
         start, end = datetime_last24hours()
-
-    # if args['keyed_by'] not in ["time", "location"]:
-    #     keyed_by = "time"
-    # else:
-    #     keyed_by = args['keyed_by']
 
     # handle the interval, default to hourly if no args
     if args['interval'] not in ["Daily", "Hourly", "15-minute"]:
@@ -324,12 +346,31 @@ def parse_common_teragon(args):
     }
 
 
+def etl_data_from_teragon(url, data, tranpose, indexed):
+    """handles making request to the teragon service and transform the response
+
+    Arguments:
+        url {str} -- Teragon API endpoint
+        data {dict} -- request payload (always sent as data via POST)
+        tranpose {bool} --  transpose the resulting table (default: False)
+
+    Returns:
+        {dict} -- Teragon API response transformed into a nested dictionary, ready to be transmitted as JSON
+    """
+
+    response = requests.post(url, data=data)
+    # print(response.request.body)
+    # post-process and return the response
+    table = etl.MemorySource(response.text.encode())
+    return transform_teragon_csv(table, tranpose, indexed)
+
 # ----------------------------------------------------------------------------
 # REST API Arguments
 # define parsers/validation for all types of request params
 # NOTE: the validation functionality of reqparse somewhat interferes with
 # Flasgger's validation; we also have some simple default reversion built
 # into the request functions. We'll likely clean most of this up in the future.
+
 
 parser = reqparse.RequestParser()
 
@@ -364,14 +405,14 @@ parser.add_argument(
     # default=False,
     required=False
 )
-# parser.add_argument(
-#     'keyed_by',
-#     type=str,
-#     help='determines how data is transformed: "time" or "location"',
-#     choices=["time", "location", "", None],
-#     default="time",
-#     required=False
-# )
+parser.add_argument(
+    'keyed_by',
+    type=str,
+    help='determines how data is transformed: "time" or "location"',
+    choices=["time", "location", "", None],
+    default="time",
+    required=False
+)
 parser.add_argument(
     'geom',
     type=str,
@@ -401,17 +442,32 @@ class Gage(Resource):
             ids = [x for x in range(1, 34)]
         else:
             ids = parse_gauge_ids(args['ids'].split(","))
-        print(ids)
+        # print(ids)
         payload['gauges'] = ids
+
+        # handle the keyed_by parameter
+        if not args['keyed_by'] or (args['keyed_by'] not in ["time", "location"]):
+            # default is data keyed by time, same as Teragon API
+            tranpose = False
+        else:
+            if args['keyed_by'] == "time":
+                tranpose = False
+            elif args['keyed_by'] == "location":
+                # alternatively, we transpose the data so it's keyed by location
+                tranpose = True
+            else:
+                # default is data keyed by time, same as Teragon API
+                tranpose = False
 
         print(payload)
 
-        # make the request
-        response = requests.post(application.config['URL_GAGE'], data=payload)
-        print(response.request.body)
-        # post-process and return the response
-        table = etl.MemorySource(response.text.encode())
-        return transform_teragon_csv(table)
+        # make the request and return the response
+        return etl_data_from_teragon(
+            application.config['URL_GAGE'],
+            data=payload,
+            tranpose=tranpose,
+            indexed=True
+        )
 
 
 class Garr(Resource):
@@ -441,12 +497,27 @@ class Garr(Resource):
         payload['pixels'] = pixels
         print(payload)
 
-        # make the request
-        response = requests.post(application.config['URL_GARR'], data=payload)
-        print(response.request.body)
-        # post-process and return the response
-        table = etl.MemorySource(response.text.encode())
-        return transform_teragon_csv(table)
+        # handle the keyed_by parameter
+        if not args['keyed_by'] or (args['keyed_by'] not in ["time", "location"]):
+            # default is data keyed by time, same as Teragon API
+            tranpose = False
+        else:
+            if args['keyed_by'] == "time":
+                tranpose = False
+            elif args['keyed_by'] == "location":
+                # alternatively, we transpose the data so it's keyed by location
+                tranpose = True
+            else:
+                # default is data keyed by time, same as Teragon API
+                tranpose = False
+
+        # make the request and return the response
+        return etl_data_from_teragon(
+            application.config['URL_GARR'],
+            data=payload,
+            tranpose=tranpose,
+            indexed=True
+        )
 
 
 class Grid(Resource):

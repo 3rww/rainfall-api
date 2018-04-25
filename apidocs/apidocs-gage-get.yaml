@@ -22,12 +22,12 @@ parameters:
     enum: ["Daily", "Hourly", "15-minute"]
     default: "Hourly"
     allowEmptyValue: true
-  # - name: keyed_by
-  #   in: query
-  #   type: string
-  #   default: "location"
-  #   enum: ["time", "location"]
-  #   allowEmptyValue: true
+  - name: keyed_by
+    in: query
+    type: string
+    default: "time"
+    enum: ["time", "location"]
+    allowEmptyValue: true
   - name: zerofill
     in: query
     type: boolean

@@ -29,12 +29,12 @@ parameters:
       type: integer
     allowEmptyValue: true
     description: List of pixels to return, using the six-digit pixel ID number. Defaults to None. This parameter will override the basin parameter. If no basin is specified in the basin parameter, and this parameter is left empty, all pixels will be returned.
-  # - name: keyed_by
-  #   in: query
-  #   type: string
-  #   default: "location"
-  #   enum: ["time", "location"]
-  #   allowEmptyValue: true
+  - name: keyed_by
+    in: query
+    type: string
+    default: "time"
+    enum: ["time", "location"]
+    allowEmptyValue: true
   - name: zerofill
     in: query
     type: boolean
