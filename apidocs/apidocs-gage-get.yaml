@@ -28,7 +28,7 @@ parameters:
     default: "time"
     enum: ["time", "location"]
     allowEmptyValue: true
-    description: Value type on which the returned data is indexed. "Time" means data will be indexed by time, then by location; "Location" is vice versa.
+    description: Value type on which the returned data is indexed. "Time" means data will be indexed by time, then by location (the gauge ID); "Location" is vice versa.
   - name: zerofill
     in: query
     type: boolean
