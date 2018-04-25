@@ -8,7 +8,6 @@ rainfall data (rain gauge and gauage-adjusted radar rainfall data).
 
 # standard library
 import os
-# from collections import OrderedDict
 # framework
 from flask import Flask, render_template, redirect, url_for
 # API
@@ -20,6 +19,7 @@ import requests
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from dateutil import tz
+import timeit
 # HTML parsing
 import bs4
 from bs4 import BeautifulSoup
@@ -38,6 +38,9 @@ application.debug = True
 application.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:API.raingauge"
 application.config['URL_GARR'] = "http://web.3riverswetweather.org/trp:API.pixel"
 
+# global parameter to set data response format. This may be exposed to user in the future
+application.config['INDEXED'] = True
+
 # ReST-ful API via Flask-Restful
 api = Api(application)
 
@@ -50,8 +53,8 @@ swag = Swagger(
     application,
     template={
         "info": {
-            "title": "3RWW Rainfall API (beta)",
-            "description": "API for rainfall data collected and maintained by 3 Rivers Wet Weather",
+            "title": "3RWW Rainfall API (alpha)",
+            "description": "An API for rainfall data collected and maintained by 3 Rivers Wet Weather with support from Teragon and ALCOSAN.",
             "contact": {
                 "responsibleOrganization": "CivicMapper",
                 "responsibleDeveloper": "Christian Gass",
@@ -357,12 +360,19 @@ def etl_data_from_teragon(url, data, tranpose, indexed):
     Returns:
         {dict} -- Teragon API response transformed into a nested dictionary, ready to be transmitted as JSON
     """
-
+    # get the data
+    start_time = timeit.default_timer()
     response = requests.post(url, data=data)
-    # print(response.request.body)
+    elapsed = timeit.default_timer() - start_time
+    print("response received in {0} seconds".format(elapsed))
+
     # post-process and return the response
+    start_time = timeit.default_timer()
     table = etl.MemorySource(response.text.encode())
-    return transform_teragon_csv(table, tranpose, indexed)
+    result = transform_teragon_csv(table, tranpose, indexed)
+    elapsed = timeit.default_timer() - start_time
+    print("data processed received in {0} seconds".format(elapsed))
+    return result
 
 # ----------------------------------------------------------------------------
 # REST API Arguments
@@ -459,14 +469,15 @@ class Gage(Resource):
                 # default is data keyed by time, same as Teragon API
                 tranpose = False
 
-        print(payload)
+        print("\nrequest {0}\npayload".format(
+            datetime.now().isoformat()), payload)
 
         # make the request and return the response
         return etl_data_from_teragon(
             application.config['URL_GAGE'],
             data=payload,
             tranpose=tranpose,
-            indexed=True
+            indexed=application.config['INDEXED']
         )
 
 
@@ -495,7 +506,9 @@ class Garr(Resource):
             # use all pixels
             pixels = parse_pixels(args['ids'].split(","))
         payload['pixels'] = pixels
-        print(payload)
+
+        print("\nrequest {0}\npayload".format(
+            datetime.now().isoformat()), payload)
 
         # handle the keyed_by parameter
         if not args['keyed_by'] or (args['keyed_by'] not in ["time", "location"]):
@@ -516,7 +529,7 @@ class Garr(Resource):
             application.config['URL_GARR'],
             data=payload,
             tranpose=tranpose,
-            indexed=True
+            indexed=application.config['INDEXED']
         )
 
 
