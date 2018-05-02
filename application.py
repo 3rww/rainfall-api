@@ -29,10 +29,14 @@ from sortedcontainers import SortedDict
 # geojson spec
 # from geojson import Point, Feature, FeatureCollection
 import json
+from flask_cors import CORS
 
 # ----------------------------------#
 # FLASK APP
 application = Flask(__name__)
+# enable CORS across the application
+CORS(application)
+
 application.debug = True
 
 application.config['URL_GAGE'] = "http://web.3riverswetweather.org/trp:API.raingauge"
