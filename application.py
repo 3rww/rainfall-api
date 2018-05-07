@@ -79,14 +79,27 @@ swag = Swagger(
 # ----------------------------------------------------------------------------
 # HELPERS
 
-# preload a list of pixel IDs from a file (utilized by the GARR endpoint)
-pixel_csv = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), "data", "grid_centroids.csv")
-basin_lookup_file = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), "data", "lookup_basins.json")
-all_pixels = list(etl.fromcsv(pixel_csv).values('id'))
+
+# get a lookup dictionary of pixels by basin, read in from file on disk.
+pixel_lookup = {}
+
+basin_lookup_file = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "data", "lookup_basins_revised.json"
+)
 with open(basin_lookup_file, mode='r') as fp:
-    basin_pixels = json.load(fp)
+    pixel_lookup = json.load(fp)
+
+# generate a list of all pixels, including those not in basins, in "123-456" format
+all_pixels = []
+# generate a list of all pixels, excluding those not in basins, in "123-456" format
+all_basin_pixels = []
+
+for k, v in pixel_lookup.items():
+    for i in v:
+        all_pixels.append(i)
+        if k != "other":
+            all_basin_pixels.append(i)
 
 
 def handle_utc(datestring, direction="to_local", local_zone='America/New_York'):
@@ -144,13 +157,6 @@ def datetime_last24hours():
     return start, end
 
 
-def parse_pixels(list_of_ids):
-    '''given list of 6-digit pixel ids, form the expected format of the API
-    pixel argument
-    '''
-    return ";".join(["{0},{1}".format(i[:3], i[3:]) for i in list_of_ids])
-
-
 def parse_gauge_ids(list_of_ids):
     """give list of rain gauge ids, form the expected format of the API gauge
     ID argument
@@ -158,14 +164,61 @@ def parse_gauge_ids(list_of_ids):
     return ",".join([i for i in list_of_ids])
 
 
+def parse_pixels_to_args(list_of_ids):
+    '''given list of dashed pixel ids, form the expected format of the
+    Teragon API's pixel argument, e.g., 
+        ['123-456','654-321'] => "123,456;654,321"
+
+    The dashed pixel id format is provided by both the Teragon API
+    *responses* and the geojson grid that this API provides for viz and lookups
+    '''
+    return ";".join(["{0},{1}".format(*i.split("-")) for i in list_of_ids])
+
+
+def parse_pixel_basin_args(args):
+    """parse requested pixel ids vs basin selection
+    """
+    pixels = ''
+    # if no pixel ids are provided
+    if not args['ids']:
+        # if a basin not provided
+        if not args['basin']:
+            # then use all pixels
+            pixels = parse_pixels_to_args(all_pixels)
+        # if a basin argument is provided
+        else:
+            # if the basin argument is for 'all basins'
+            if args['basin'] == 'all basins':
+                # make a list of all pixels, excluding those not in basins
+                pixels = parse_pixels_to_args(all_basin_pixels)
+            else:
+                # otherwise, use the basin lookup
+                pixels = parse_pixels_to_args(
+                    pixel_lookup[args['basin']])
+    else:
+        # use all pixels
+        pixels = parse_pixels_to_args(args['ids'].split(","))
+    return pixels
+
+
+"""
+def parse_pixels(list_of_ids):
+    '''given list of 6-digit pixel ids, form the expected format of the API
+    pixel argument
+    '''
+    return ";".join(["{0},{1}".format(i[:3], i[3:]) for i in list_of_ids])
+
+
 def reverse_parse_pixels(pixels_arg):
-    '''turns semi-colon and comma-delimited pixels arg into a list of 6 digit pixel ids
+    '''NOT USED 
+    turns semi-colon and comma-delimited pixels arg into a list of 6 digit pixel ids
     '''
     return ["{0}{1}".format(s.split(",")[0], s.split(",")[1]) for s in pixels_arg.split(";")]
 
 
 def reverse_parse_pixels_xy(pixels_arg):
-    '''turns semi-colon and comma-delimited pixels arg into a dictionary of
+    '''NOT USED 
+    turns semi-colon and comma-delimited pixels arg into a dictionary of
     its arbitrary x,y coordinates
     '''
     return [{"x": s.split(",")[0], "y":s.split(",")[1]} for s in pixels_arg.split(";")]
@@ -209,6 +262,8 @@ def parse_response_html(page):
     d = etl.dicts(t1)
     t2 = etl.fromdicts(d, header=realheader)
     return t2
+
+"""
 
 
 def transform_teragon_csv(teragon_csv, transpose=False, indexed=False):
@@ -393,8 +448,8 @@ parser.add_argument(
 parser.add_argument(
     'basin',
     type=str,
-    choices=["all basins", "Chartiers Creek", "Lower Ohio + Girty's Run", "Main Rivers",
-             "Saw Mill Run", "Turtle Thompson", "Upper Allegheny Pine Creek", "Upper Monongahela", "", None],
+    choices=["all basins", "Chartiers Creek", "Lower Ohio River", "Saw Mill Run", "Lower Northern Allegheny River", "Upper Ohio/Allegheny/Monongahela River",
+             "Upper Allegheny River", "Shallow-Cut Monongahela River", "Thompson Run/Turtle Creek", "all_pixels", "", None],
     help='Basin for which to get rainfall data. This is effectively a shortcut for the ids parameter. Defaults to all basins. If ids are specified in the ids parameter, this parameter will be ignored.',
     required=False)
 parser.add_argument(
@@ -498,17 +553,7 @@ class Garr(Resource):
 
         # handle the pixels or basin parameters
         # if pixels not provided
-        if not args['ids']:
-            # if basin not provided
-            if not args['basin']:
-                # use all pixels
-                pixels = ";".join(all_pixels)
-            else:
-                # if basin is provided but pixels not, use basin
-                pixels = parse_pixels(basin_pixels[args['basin']])
-        else:
-            # use all pixels
-            pixels = parse_pixels(args['ids'].split(","))
+        pixels = parse_pixel_basin_args(args)
         payload['pixels'] = pixels
 
         print("\nrequest {0}\npayload".format(

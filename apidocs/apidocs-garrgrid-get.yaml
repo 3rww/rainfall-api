@@ -10,12 +10,6 @@ parameters:
     enum: ["point","polygon"]
     default: "polygon"
     description: return the grid as polygons, or the centroids of the grid polygons (points)
-  # - name: basin
-  #   in: query
-  #   type: string
-  #   enum: ["Chartiers Creek", "Lower Ohio Girty's Run", "Main Rivers", "Saw Mill Run","Turtle Thompson","Upper Allegheny Pine Creek","Upper Monongahela"]
-  #   default: ""
-  #   allowEmptyValue: true
 responses:
   200:
     description: geojson of the grid used for displaying Gauge-Adjusted Rader Rainfall Data

@@ -19,23 +19,23 @@ parameters:
     in: query
     type: string
     default: "all basins"
-    enum: ["all basins", "Chartiers Creek", "Lower Ohio + Girty's Run", "Main Rivers", "Saw Mill Run", "Turtle Thompson", "Upper Allegheny Pine Creek", "Upper Monongahela"]
+    enum: ["all basins", "Chartiers Creek", "Lower Ohio River", "Saw Mill Run","Lower Northern Allegheny River","Upper Ohio/Allegheny/Monongahela River","Shallow-Cut Monongahela River","Upper Allegheny River","Thompson Run/Turtle Creek"]
     allowEmptyValue: true
-    description: Basin for which to get rainfall data. This is effectively a shortcut for the pixels parameter. Defaults to all basins. If pixels are specified in the pixels parameter, this parameter will be ignored.
+    description: ALCOSAN Sewershed Planning Basin for which to get rainfall data. This is effectively a shortcut for the pixels parameter, letting you specify general areas of interest for which to retrieve rainfall data. By default, this parameter will retreive data for all basins (but not all available pixels, which cover the entire county). If pixels are specified in the pixel IDs parameter, this parameter will be ignored. If no basin is specified, and no pixels are specified, all pixels for the county will be retrieved.
   - name: ids
     in: query
     type: array
     items:
       type: integer
     allowEmptyValue: true
-    description: List of pixels to return, using the six-digit pixel ID number. Defaults to None. This parameter will override the basin parameter. If no basin is specified in the basin parameter, and this parameter is left empty, all pixels will be returned.
+    description: List of pixels to return, using the six-digit pixel ID number ("123-456"). Defaults to None. This parameter will override the basin parameter. If no basin is specified in the basin parameter, and this parameter is left empty, all pixels will be returned. IDs are provided in the geojson file returned by the 'garrd-grid' endpoint.
   - name: keyed_by
     in: query
     type: string
     default: "time"
     enum: ["time", "location"]
     allowEmptyValue: true
-    description: Value type on which the returned data is indexed. "Time" means data will be indexed by time, then by location (the pixel ID); "Location" is vice versa.
+    description: Value type on which the returned data is indexed. "Time" means data will be indexed by time, then by location (the pixel ID); "Location" is vice versa. Defaults to time.
   - name: zerofill
     in: query
     type: boolean
@@ -45,24 +45,73 @@ parameters:
 responses:
   200:
     description: 
-    # examples: 
-    #   - response_by_location: {
-    #       "id1" : [
-    #           {"time1": "value"},
-    #           {"time2": "value"}
-    #       ],
-    #       "id2" : [
-    #           {"time1": "value"},
-    #           {"time2": "value"}
-    #       ]
-    #   }
-    #   - response_by_time: {
-    #       "time1" : [
-    #           {"id1": "value"},
-    #           {"id2": "value"}
-    #       ],
-    #       "time2" : [
-    #           {"id1": "value"},
-    #           {"id2": "value"}
-    #       ]
-    #   }
+    examples: 
+      - "indexed by time (default)": {
+          "2004-09-17T11:00:00": {
+            "122-139": 0.638,
+            "123-139": 0.581,
+            "123-140": 0.507,
+            "123-141": 0.464,
+            "124-139": 0.581,
+            "124-140": 0.507,
+            "124-141": 0.4519,
+            "124-142": 0.423,
+          },
+          "2004-09-17T12:00:00": {
+            "122-139": 0.758,
+            "123-139": 0.7,
+            "123-140": 0.723,
+            "123-141": 0.6938,
+            "124-139": 0.634,
+            "124-140": 0.659,
+            "124-141": 0.58,
+            "124-142": 0.59,
+          }
+      }
+      - response_by_time: {
+          "122-139": {
+            "2004-09-17T03:00:00": 0.007,
+            "2004-09-17T04:00:00": 0.054,
+            "2004-09-17T05:00:00": 0.012,
+            "2004-09-17T06:00:00": 0.044,
+            "2004-09-17T07:00:00": 0.193,
+            "2004-09-17T08:00:00": 0.056,
+            "2004-09-17T09:00:00": 0.3409,
+            "2004-09-17T10:00:00": 0.499,
+            "2004-09-17T11:00:00": 0.638,
+            "2004-09-17T12:00:00": 0.758,
+            "2004-09-17T13:00:00": 1.1849,
+            "2004-09-17T14:00:00": 0.663,
+            "2004-09-17T15:00:00": 0.57,
+            "2004-09-17T16:00:00": 0.498,
+            "2004-09-17T17:00:00": 0.36,
+            "2004-09-17T18:00:00": 0.172,
+            "2004-09-17T19:00:00": 0.121,
+            "2004-09-17T20:00:00": 0.163,
+            "2004-09-17T21:00:00": 0.215,
+            "2004-09-17T22:00:00": 0.414,
+            "2004-09-17T23:00:00": 0.073
+          },
+          "123-139": {
+            "2004-09-17T03:00:00": 0.007,
+            "2004-09-17T04:00:00": 0.051,
+            "2004-09-17T05:00:00": 0.014,
+            "2004-09-17T06:00:00": 0.042,
+            "2004-09-17T07:00:00": 0.18,
+            "2004-09-17T08:00:00": 0.066,
+            "2004-09-17T09:00:00": 0.317,
+            "2004-09-17T10:00:00": 0.3919,
+            "2004-09-17T11:00:00": 0.581,
+            "2004-09-17T12:00:00": 0.7,
+            "2004-09-17T13:00:00": 1.242,
+            "2004-09-17T14:00:00": 0.641,
+            "2004-09-17T15:00:00": 0.598,
+            "2004-09-17T16:00:00": 0.498,
+            "2004-09-17T17:00:00": 0.356,
+            "2004-09-17T18:00:00": 0.167,
+            "2004-09-17T19:00:00": 0.1199,
+            "2004-09-17T20:00:00": 0.176,
+            "2004-09-17T21:00:00": 0.232,
+            "2004-09-17T22:00:00": 0.362,
+            "2004-09-17T23:00:00": 0.088
+          },
