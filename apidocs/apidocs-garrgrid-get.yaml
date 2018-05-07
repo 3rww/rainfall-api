@@ -2,7 +2,7 @@ Get the geojson for displaying Gauge-Adjusted Rader Rainfall Data for Allegheny 
 Get the geojson used for displaying the locations of the Gauge-Adjusted Rader Rainfall Data for Allegheny County, PA, USA. This data includes the pixel IDs used by the `garrd` endpoint.
 ---
 tags: 
-  - garrd-grid
+  - gauge-adjusted radar rainfall data
 parameters:
   - name: geom
     in: query

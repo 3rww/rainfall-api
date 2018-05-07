@@ -2,7 +2,7 @@ Get the locations of 3RWW rain gauges in Allegheny County, PA, USA as geojson.
 Get the locations of 3RWW rain gauges in Allegheny County, PA, USA. as geojson. This data includes the gauge IDs used by the `gauge` endpoint. Note that active/installed and inactive/uninstalled gauges are returned here.
 ---
 tags: 
-  - gauge-point
+  - rain gauge data
 responses:
   200:
     description: geojson of the raing gauge locations

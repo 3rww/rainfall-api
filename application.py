@@ -637,8 +637,8 @@ def home():
 
 api.add_resource(Garr, '/api/garrd/')
 api.add_resource(Gage, '/api/gauge/')
-api.add_resource(GarrGrid, '/api/garrd/grid')
-api.add_resource(GagePoint, '/api/gauge/locations')
+api.add_resource(GarrGrid, '/api/garrd/geojson')
+api.add_resource(GagePoint, '/api/gauge/geojson')
 
 if __name__ == "__main__":
     application.run()

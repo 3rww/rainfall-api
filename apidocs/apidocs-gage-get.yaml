@@ -2,7 +2,7 @@ Return rainfall totals from 3RWW rain gauges.
 Return rainfall totals over a specified period from 3RWW's rain gauge system. By default, this returns hourly totals for for all gauges from the last 24 hours.
 ---
 tags: 
-  - gauge
+  - rain gauge data
 parameters:
   - name: ids
     in: query

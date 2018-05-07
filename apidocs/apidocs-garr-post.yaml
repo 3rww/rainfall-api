@@ -2,7 +2,7 @@ Get Gauge-Adjusted Radar Rainfall Data for Allegheny County, PA, USA.
 Get Gauge-Adjusted Radar Rainfall Data for Allegheny County, PA, USA. This data is interpolated from rain gauges and NEXRAD radar data at a 1 kilometer grid resolution across Allegheny County, Pennsylvania. This data is available from January 1, 2000 to present at 15-minute intervals for 2,313 virtual rain gauges locations. While there are over 1.4 billion data points available, please don't think you'll be able to request them all at once!
 ---
 tags: 
-  - garrd
+  - gauge-adjusted radar rainfall data
 parameters:
   - name: dates
     in: query
