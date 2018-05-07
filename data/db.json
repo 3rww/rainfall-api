@@ -1,0 +1,17 @@
+{
+    "events": [{
+            "id": 0,
+            "dt_start": "2016-09-08 18:00 EDT",
+            "dt_end": "2016-09-09 09:00 EDT",
+            "report": "GARR-Report_Sept2016.pdf",
+            "label": ""
+        },
+        {
+            "id": 1,
+            "dt_start": "2004-09-16 20:00 EDT",
+            "dt_end": "2004-09-18 4:00 EDT",
+            "report": "200409note.pdf",
+            "label": "Hurricane Ivan"
+        }
+    ]
+}
