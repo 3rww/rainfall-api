@@ -10,7 +10,7 @@ parameters:
     items:
       type: integer
     allowEmptyValue: true
-    description: list of gauges by ID number
+    description: list of gauges by Gauge ID number
   - name: dates
     in: query
     type: string
@@ -28,7 +28,7 @@ parameters:
     default: "time"
     enum: ["time", "location"]
     allowEmptyValue: true
-    description: Value type on which the returned data is indexed. "Time" means data will be indexed by time, then by location (the gauge ID); "Location" is vice versa.
+    description: Value type on which the returned data is indexed. "time" means data will be indexed by time, then by location (the pixel ID); "location" is vice versa. The former is useful for timeseries visualization of all locations; the later is useful for charting individual locations over time. Defaults to time.
   - name: zerofill
     in: query
     type: boolean

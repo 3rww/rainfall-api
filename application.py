@@ -540,6 +540,21 @@ class Gage(Resource):
         )
 
 
+class GagePoint(Resource):
+
+    @swag_from('apidocs/apidocs-gagepoint-get.yaml')
+    def get(self):
+
+        # load geojson reference file from disk and return it as python dict
+        pixel_json_file_path = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), "data", "gauges.geojson")
+        with open(pixel_json_file_path) as f:
+            pixel_json = json.load(f)
+            return pixel_json
+
+        return None
+
+
 class Garr(Resource):
     @swag_from('apidocs/apidocs-garr-post.yaml')
     def post(self):
@@ -582,7 +597,7 @@ class Garr(Resource):
         )
 
 
-class Grid(Resource):
+class GarrGrid(Resource):
     @swag_from('apidocs/apidocs-garrgrid-get.yaml')
     def get(self):
 
@@ -622,7 +637,8 @@ def home():
 
 api.add_resource(Garr, '/api/garrd/')
 api.add_resource(Gage, '/api/gauge/')
-api.add_resource(Grid, '/api/garrd/grid')
+api.add_resource(GarrGrid, '/api/garrd/grid')
+api.add_resource(GagePoint, '/api/gauge/locations')
 
 if __name__ == "__main__":
     application.run()

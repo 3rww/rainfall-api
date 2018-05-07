@@ -1,0 +1,15 @@
+Get the locations of 3RWW rain gauges in Allegheny County, PA, USA as geojson.
+Get the locations of 3RWW rain gauges in Allegheny County, PA, USA. as geojson. This data includes the gauge IDs used by the `gauge` endpoint. Note that active/installed and inactive/uninstalled gauges are returned here.
+---
+tags: 
+  - gauge-point
+responses:
+  200:
+    description: geojson of the raing gauge locations
+    examples: {
+      "type": "FeatureCollection",
+      "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+      "features": [
+        { "type": "Feature", "properties": { "ID": 1, "GAUGE_ID": 2660, "NAME": "PWSA (Observatory Hill)", "ADDRESS": "Montana St. Pittsburgh, PA 15214", "WEB_NAME": "Observatory Hill", "ELEV_FT": 1369.0, "ANT_ELEV": 20, "NWS_DES": "OBSP1", "GlobalID": "1496a324-e962-4f81-9694-2ec0784f6719" }, "geometry": { "type": "Point", "coordinates": [ -80.01955833005286, 40.493444439709208 ] } },
+      ]
+    }
