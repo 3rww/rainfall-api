@@ -57,15 +57,15 @@ swag = Swagger(
     application,
     template={
         "info": {
-            "title": "3RWW Rainfall API (alpha)",
-            "description": "An API for rainfall data collected and maintained by 3 Rivers Wet Weather with support from Teragon and ALCOSAN.",
+            "title": "3RWW Rainfall API (beta)",
+            "description": "An API for rainfall data collected and maintained by 3 Rivers Wet Weather, with support from Teragon and ALCOSAN.",
             "contact": {
-                "responsibleOrganization": "CivicMapper",
+                "responsibleOrganization": "3 Rivers Wet Weather",
                 "responsibleDeveloper": "Christian Gass",
                 "email": "christian.gass@civicmapper.com",
                 "url": "http://www.3riverswetweather.org/municipalities/calibrated-radar-rainfall-data",
             },
-            "version": "0.1.0"
+            "version": "0.2.0"
         },
         #   "host": "mysite.com",  # overrides localhost:5000
         # "basePath": "/api",  # base bash for blueprint registration
