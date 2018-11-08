@@ -1,4 +1,4 @@
-# 3RWW Rainfall API
+# 3RWW Rainfall API (experimental)
 
 > A clean API for 3RWW's immense trove of historical rainfall data for Allegheny County
 
