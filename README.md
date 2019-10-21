@@ -1,3 +1,5 @@
+*NOTE: this repository has been mothballed in favor of a new Rainfall API. See https://3rww.github.io/api-docs/ for the legacy and new rainfall API documentation.*
+
 # 3RWW Rainfall API (experimental)
 
 > A clean API for 3RWW's immense trove of historical rainfall data for Allegheny County
@@ -16,4 +18,4 @@ Built with [Python-Flask](http://flask.pocoo.org/) and [Flasgger](https://github
 
 # Development & Deployment
 
-(to be completed)
+Deployed with AWS Elastic Beanstalk.
