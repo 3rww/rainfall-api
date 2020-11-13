@@ -1,4 +1,4 @@
-*NOTE: this repository has been mothballed in favor of a new Rainfall API. See https://3rww.github.io/api-docs/ for the legacy and new rainfall API documentation.*
+*NOTE: this repository has been mothballed in favor of a new Rainfall API. See the new repository at https://github.com/3rww/data-api.
 
 # 3RWW Rainfall API (experimental)
 
